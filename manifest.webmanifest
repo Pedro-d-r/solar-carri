@@ -1,0 +1,14 @@
+
+{
+  "name": "Solar & Carro",
+  "short_name": "Solar & Carro",
+  "description": "Registo da produção solar e dos custos de carregamento do Tesla",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f2",
+  "theme_color": "#123c32",
+  "icons": []
+}
