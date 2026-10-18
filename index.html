@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123c32">
+<title>Solar & Carro</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f2;color:#20342d;font-family:Arial,sans-serif}
+header{background:#123c32;color:white;padding:24px 18px}
+h1{margin:0;font-size:26px}
+header p{margin:8px 0 0;color:#d2e9dc}
+main{max-width:600px;margin:auto;padding:15px}
+.card{background:white;padding:17px;margin-bottom:14px;border-radius:16px;box-shadow:0 2px 8px #0000000c}
+h2{font-size:18px;margin:0 0 14px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#e5f2e9;border-radius:12px;padding:14px}
+.stat small{display:block;color:#50685c;margin-bottom:8px}
+.stat strong{font-size:22px}
+label{display:block;font-size:14px;margin:12px 0 5px}
+input{width:100%;padding:12px;border:1px solid #cbd8cf;border-radius:9px;font-size:16px;background:white}
+button{width:100%;border:0;border-radius:10px;padding:13px;background:#176b4a;color:white;font-size:16px;font-weight:bold;margin-top:14px}
+.secondary{background:#e5eee8;color:#174a36}
+.entry{padding:12px 0;border-bottom:1px solid #e5ebe7}
+.entry:last-child{border:0}
+.muted{color:#68796f;font-size:13px}
+footer{text-align:center;color:#68796f;font-size:12px;padding:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>☀️ Solar & Carro</h1>
+<p>A tua energia solar e os custos do Tesla</p>
+</header>
+<main>
+<div class="card">
+<h2>Resumo dos registos</h2>
+<div class="stats">
+<div class="stat"><small>Produção solar</small><strong id="solar">0 kWh</strong></div>
+<div class="stat"><small>Carregamento Tesla</small><strong id="carro">0 kWh</strong></div>
+<div class="stat"><small>Custo registado</small><strong id="custo">0,00 €</strong></div>
+<div class="stat"><small>Registos</small><strong id="total">0</strong></div>
+</div>
+</div>
+<div class="card">
+<h2>☀️ Registar produção solar</h2>
+<label for="dataS">Data</label>
+<input id="dataS" type="date">
+<label for="energiaS">Energia produzida hoje (kWh)</label>
+<input id="energiaS" type="number" min="0" step="0.01" placeholder="Ex.: 6.5">
+<button onclick="guardar('solar')">Guardar produção</button>
+</div>
+<div class="card">
+<h2>🚗 Registar carregamento Tesla</h2>
+<label for="dataT">Data</label>
+<input id="dataT" type="date">
+<label for="energiaT">Energia carregada (kWh)</label>
+<input id="energiaT" type="number" min="0" step="0.01" placeholder="Ex.: 20">
+<label for="preco">Preço da eletricidade (€/kWh)</label>
+<input id="preco" type="number" min="0" step="0.001" value="0.16">
+<label for="solarT">Energia solar usada no carro (kWh), se souberes</label>
+<input id="solarT" type="number" min="0" step="0.01" placeholder="Deixa vazio se não souberes">
+<button onclick="guardar('tesla')">Guardar carregamento</button>
+</div>
+<div class="card">
+<h2>📋 Histórico</h2>
+<div id="historico" class="muted">Ainda não existem registos.</div>
+<button class="secondary" onclick="exportar()">Exportar histórico CSV</button>
+</div>
+<p class="muted">Os dados ficam guardados neste navegador. Exporta regularmente uma cópia.</p>
+</main>
+<footer>Solar & Carro · Registo manual de energia</footer>
+<script>
+const chave='solarCarroRegistosV1';
+let registos=[];
+try{registos=JSON.parse(localStorage.getItem(chave)||'[]')}catch(e){}
+const el=id=>document.getElementById(id);
+const numero=n=>Number(n||0);
+const euros=n=>numero(n).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+el('dataS').value=el('dataT').value=new Date().toLocaleDateString('en-CA');
+function guardar(tipo){
+ const solar=tipo==='solar';
+ const data=el(solar?'dataS':'dataT').value;
+ const campo=el(solar?'energiaS':'energiaT');
+ const energia=Number(campo.value);
+ if(!data||campo.value===''||!Number.isFinite(energia)||energia<0){alert('Indica a data e uma energia válida.');return}
+ const r={tipo,data,energia,preco:solar?0:numero(el('preco').value),solar:solar?0:numero(el('solarT').value)};
+ if(!solar&&r.solar>energia){alert('A energia solar não pode ser superior à energia carregada.');return}
+ if(!solar&&r.preco<0){alert('O preço não pode ser negativo.');return}
+ registos.unshift(r);
+ try{localStorage.setItem(chave,JSON.stringify(registos))}catch(e){alert('Não foi possível guardar os dados neste navegador.');return}
+ campo.value='';
+ if(!solar)el('solarT').value='';
+ atualizar();
+ alert('Registo guardado.');
+}
+function atualizar(){
+ const s=registos.filter(r=>r.tipo==='solar').reduce((a,r)=>a+r.energia,0);
+ const t=registos.filter(r=>r.tipo==='tesla').reduce((a,r)=>a+r.energia,0);
+ const c=registos.filter(r=>r.tipo==='tesla').reduce((a,r)=>a+r.energia*r.preco,0);
+ el('solar').textContent=s.toLocaleString('pt-PT',{maximumFractionDigits:2})+' kWh';
+ el('carro').textContent=t.toLocaleString('pt-PT',{maximumFractionDigits:2})+' kWh';
+ el('custo').textContent=euros(c);
+ el('total').textContent=registos.length;
+ el('historico').innerHTML=registos.length?registos.map((r,i)=>'<div class="entry"><b>'+ (r.tipo==='solar'?'☀️ Produção solar':'🚗 Tesla')+'</b><br>'+r.data+' · '+r.energia.toLocaleString('pt-PT')+' kWh'+(r.tipo==='tesla'?'<br>Custo: '+euros(r.energia*r.preco)+(r.solar?'<br>Solar usada: '+r.solar+' kWh':''):'')+'<br><button class="secondary" onclick="remover('+i+')">Apagar registo</button></div>').join(''):'Ainda não existem registos.';
+}
+function remover(i){if(confirm('Apagar este registo?')){registos.splice(i,1);localStorage.setItem(chave,JSON.stringify(registos));atualizar()}}
+function exportar(){
+ const linhas=[['Tipo','Data','Energia kWh','Preço €/kWh','Solar usada kWh'],...registos.map(r=>[r.tipo,r.data,r.energia,r.preco,r.solar])];
+ const csv='\uFEFF'+linhas.map(l=>l.join(';')).join('\n');
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+ const a=document.createElement('a');a.href=url;a.download='solar-carro-historico.csv';a.click();URL.revokeObjectURL(url);
+}
+atualizar();
+</script>
+</body>
+</html>
